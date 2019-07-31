@@ -5,18 +5,34 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 )
 
 type Cep struct {
-	Cep         string
-	Logradouro  string
-	Complemento string
-	Bairro      string
-	Localidade  string
-	Uf          string
+	Cep         string `json:"cep"`
+	Logradouro  string `json:"logradouro"`
+	Complemento string `json:"complemento"`
+	Bairro      string `json:"bairro"`
+	Localidade  string `json:"localidade"`
+	Uf          string `json:"uf"`
 }
 
-func Search(cep string) {
+func Handler(writer http.ResponseWriter, request *http.Request) {
+	var c Cep
+	cep := strings.TrimPrefix(request.URL.Path, "/cep/")
+
+	switch {
+	case request.Method == "GET" && cep != "":
+		response := c.Search(cep)
+		writer.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(writer, string(response))
+	default:
+		writer.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(writer, "NOT FOUND")
+	}
+}
+
+func (c Cep) Search(cep string) []byte {
 	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
 	res, err := http.Get(url)
 
@@ -28,17 +44,9 @@ func Search(cep string) {
 
 	body, _ := ioutil.ReadAll(res.Body)
 
-	var c Cep
 	json.Unmarshal([]byte(body), &c)
 
-	c.Show()
-}
+	json, _ := json.Marshal(c)
 
-func (c Cep) Show() {
-	fmt.Printf("CEP: %s\n", c.Cep)
-	fmt.Printf("Logradouro: %s\n", c.Logradouro)
-	fmt.Printf("Complemento: %s\n", c.Complemento)
-	fmt.Printf("Bairro: %s\n", c.Bairro)
-	fmt.Printf("Localidade: %s\n", c.Localidade)
-	fmt.Printf("UF: %s\n", c.Uf)
+	return json
 }
