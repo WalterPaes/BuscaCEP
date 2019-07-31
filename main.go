@@ -1,16 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"log"
+	"net/http"
 
 	"github.com/WalterPaes/BuscaCEP/cep"
 )
 
 func main() {
-	var c string
 
-	fmt.Println("Insira o Cep que deseja buscar:")
-	fmt.Scan(&c)
-
-	cep.Search(c)
+	http.HandleFunc("/cep/", cep.Handler)
+	log.Println("Executando...")
+	log.Fatal(http.ListenAndServe(":3000", nil))
 }
