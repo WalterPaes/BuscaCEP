@@ -18,35 +18,48 @@ type Cep struct {
 }
 
 func Handler(writer http.ResponseWriter, request *http.Request) {
-	var c Cep
-	cep := strings.TrimPrefix(request.URL.Path, "/cep/")
+	var cep Cep
+
+	cep.Cep = strings.TrimPrefix(request.URL.Path, "/cep/")
+	if len(cep.Cep) != 8 {
+		writer.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(writer, string("{\"erro\":\"Cep Inválido\"}"))
+		return
+	}
 
 	switch {
-	case request.Method == "GET" && cep != "":
-		response := c.Search(cep)
-		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(writer, string(response))
+	case request.Method == "GET":
+		response, err := cep.Search()
+
+		if len(err) > 0 {
+			writer.WriteHeader(http.StatusNotFound)
+			fmt.Fprintf(writer, err)
+		} else {
+			writer.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(writer, response)
+		}
 	default:
 		writer.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(writer, "NOT FOUND")
 	}
+	return
 }
 
-func (c Cep) Search(cep string) []byte {
-	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
+func (c *Cep) Search() (string, string) {
+	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", c.Cep)
 	res, err := http.Get(url)
 
 	if err != nil {
-		panic(err)
+		return "", "Um erro ocorreu!"
 	}
 
 	defer res.Body.Close()
 
 	body, _ := ioutil.ReadAll(res.Body)
 
-	json.Unmarshal([]byte(body), &c)
+	json.Unmarshal(body, &c)
 
 	json, _ := json.Marshal(c)
 
-	return json
+	return string(json), ""
 }
