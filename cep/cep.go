@@ -33,33 +33,39 @@ func Handler(writer http.ResponseWriter, request *http.Request) {
 
 		if len(err) > 0 {
 			writer.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(writer, err)
+			fmt.Fprintf(writer, string("{\"erro\":\""+err+"\"}"))
 		} else {
 			writer.Header().Set("Content-Type", "application/json")
 			fmt.Fprint(writer, response)
 		}
 	default:
 		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "NOT FOUND")
+		fmt.Fprintf(writer, "CEP Inválido!")
 	}
 	return
 }
 
 func (c *Cep) Search() (string, string) {
 	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", c.Cep)
-	res, err := http.Get(url)
 
+	res, err := http.Get(url)
 	if err != nil {
-		return "", "Um erro ocorreu!"
+		panic(err)
 	}
 
 	defer res.Body.Close()
 
-	body, _ := ioutil.ReadAll(res.Body)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		panic(err)
+	}
 
 	json.Unmarshal(body, &c)
 
-	json, _ := json.Marshal(c)
-
-	return string(json), ""
+	if len(c.Uf) < 1 {
+		return "", "CEP Não existente!"
+	} else {
+		json, _ := json.Marshal(c)
+		return string(json), ""
+	}
 }
