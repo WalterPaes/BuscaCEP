@@ -2,6 +2,7 @@ package cep
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -23,7 +24,7 @@ func Handler(writer http.ResponseWriter, request *http.Request) {
 	cep.Cep = strings.TrimPrefix(request.URL.Path, "/cep/")
 	if len(cep.Cep) != 8 {
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(writer, string("{\"erro\":\"Cep Inválido\"}"))
+		fmt.Fprint(writer, string("{\"erro\":\"CEP Inválido\"}"))
 		return
 	}
 
@@ -31,35 +32,41 @@ func Handler(writer http.ResponseWriter, request *http.Request) {
 	case request.Method == "GET":
 		response, err := cep.Search()
 
-		if len(err) > 0 {
-			writer.WriteHeader(http.StatusNotFound)
-			fmt.Fprintf(writer, err)
+		if err != nil {
+			writer.Header().Set("Content-Type", "application/json")
+			fmt.Fprintf(writer, string("{\"erro\":\""+err.Error()+"\"}"))
 		} else {
 			writer.Header().Set("Content-Type", "application/json")
 			fmt.Fprint(writer, response)
 		}
 	default:
 		writer.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(writer, "NOT FOUND")
+		fmt.Fprintf(writer, "CEP Inválido!")
 	}
 	return
 }
 
-func (c *Cep) Search() (string, string) {
+func (c *Cep) Search() (string, error) {
 	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", c.Cep)
-	res, err := http.Get(url)
 
+	res, err := http.Get(url)
 	if err != nil {
-		return "", "Um erro ocorreu!"
+		return "", err
 	}
 
 	defer res.Body.Close()
 
-	body, _ := ioutil.ReadAll(res.Body)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
 
 	json.Unmarshal(body, &c)
 
-	json, _ := json.Marshal(c)
-
-	return string(json), ""
+	if len(c.Uf) < 1 {
+		return "", errors.New("CEP Inválido")
+	} else {
+		json, _ := json.Marshal(c)
+		return string(json), err
+	}
 }
