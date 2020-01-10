@@ -7,17 +7,24 @@ import (
 	"net/http"
 )
 
-func Search(cep string) ([]byte, error, int) {
+var ErrOccurred = errors.New("an error occurred")
+
+type Service struct {}
+
+// Search a Postal Code in ViaCEP service
+func (svc Service) Search(cep string) ([]byte, error, int) {
 	url := fmt.Sprintf("https://viacep.com.br/ws/%s/json/", cep)
 
+	// Do Request
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, err, http.StatusInternalServerError
 	}
 
 	defer res.Body.Close()
-	if res.StatusCode != 200  {
-		return nil, errors.New("an error occurred"), res.StatusCode
+
+	if res.StatusCode != 200 {
+		return nil, ErrOccurred, res.StatusCode
 	}
 
 	body, err := ioutil.ReadAll(res.Body)

@@ -3,21 +3,14 @@ package adapter
 import (
 	"github.com/WalterPaes/BuscaCEP/pkg/domains/cep"
 	"github.com/WalterPaes/BuscaCEP/pkg/helper"
-	"net/http"
+	"github.com/WalterPaes/BuscaCEP/pkg/integration/viacep"
 )
 
-func CepSearch(c string) ([]byte, int) {
+func SearchCep(c string) ([]byte, int) {
+	address := cep.NewAddress(c, &viacep.Service{})
 
-	// Checking if is a valid PostalCode
-	err := cep.Validation(c)
-	if err != nil {
-		var e helper.Error
-		e.Message = err.Error()
-		return e.ToByte(), http.StatusBadRequest
-	}
-
-	// Make a Search by Postal Code Number
-	result, err, status := cep.Search(c)
+	// Make a Search by Zip Code Number
+	result, err, status := address.SearchCep()
 	if err != nil {
 		var e helper.Error
 		e.Message = err.Error()
